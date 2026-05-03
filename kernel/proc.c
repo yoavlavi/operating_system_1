@@ -340,6 +340,22 @@ reparent(struct proc *p)
   }
 }
 
+//co_yield
+
+int co_yield(int target_pid, int value){
+  int recevied_value = 0;
+  int my_pid = myproc()->pid;
+  
+  /* check for invalid inputs*/
+  if(target_pid == my_pid || target_pid <= 0 || value <= 0){
+    return -1; 
+  }
+
+
+  return recevied_value;
+}
+
+
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
