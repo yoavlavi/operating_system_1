@@ -343,16 +343,63 @@ reparent(struct proc *p)
 //co_yield
 
 int co_yield(int target_pid, int value){
-  int recevied_value = 0;
-  int my_pid = myproc()->pid;
+
+  struct proc *target_p = 0;
+  struct proc *p;
+  struct proc *my_p = myproc();
+
+  int my_pid = my_p->pid;
   
   /* check for invalid inputs*/
   if(target_pid == my_pid || target_pid <= 0 || value <= 0){
     return -1; 
   }
+  for(p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == target_pid){
+      target_p = p;
+      break;
+    }
+    release(&p->lock);
+  }
+
+  if(target_p == 0 || target_p->killed){// target process not found or target process is killed
+    if(target_p != 0){
+      release(&target_p->lock);
+    }
+    return -1;
+  }
 
 
-  return recevied_value;
+  my_p->trapframe->a0 = -target_pid; 
+
+  // Check if the target process is waiting for US
+  if(target_p->trapframe->a0 != -my_pid) { 
+    while(my_p->trapframe->a0 == -target_pid){ 
+      printf("Process %d going to sleep\n", my_pid);
+      sleep(my_p, &target_p->lock);
+      printf("Process %d woke up\n", my_pid);
+    }
+
+    release(&target_p->lock);
+    return my_p->trapframe->a0; // Return the value given to us
+
+  } else {
+
+    target_p->trapframe->a0 = value; 
+    target_p->state = RUNNING;
+    
+    acquire(&my_p->lock);
+    my_p->state = SLEEPING;
+    release(&my_p->lock); 
+    
+    mycpu()->proc = target_p;
+    swtch(&my_p->context, &target_p->context);
+
+    release(&my_p->lock);
+
+    return my_p->trapframe->a0; // Return the value the target gave us
+  }
 }
 
 

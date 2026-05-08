@@ -10,14 +10,12 @@ int main() {
         for (;;) {
             int value = co_yield(pid1, 1);
             printf("Child received: %d\n", value); // Should print 2
-            break;
         }
     } 
     else { // Parent
         for (;;) {
             int value = co_yield(pid2, 2);
             printf("parent received: %d\n", value); // Should print 1
-            break;
         }
     }
     return 0;
