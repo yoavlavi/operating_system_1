@@ -349,7 +349,6 @@ int co_yield(int target_pid, int value){
   struct proc *my_p = myproc();
 
   int my_pid = my_p->pid;
-  
   /* check for invalid inputs*/
   if(target_pid == my_pid || target_pid <= 0 || value <= 0){
     return -1; 
@@ -371,6 +370,7 @@ int co_yield(int target_pid, int value){
   }
 
 
+  
   my_p->trapframe->a0 = -target_pid; 
 
   // Check if the target process is waiting for US
@@ -385,17 +385,13 @@ int co_yield(int target_pid, int value){
   } else {
 
     target_p->trapframe->a0 = value; 
-    acquire(&my_p->lock);
     target_p->state = RUNNING;
     my_p->state = SLEEPING;
-    release(&my_p->lock); 
     
     mycpu()->proc = target_p;
     swtch(&my_p->context, &target_p->context);
 
     release(&my_p->lock);
-    
-
     return my_p->trapframe->a0; // Return the value the target gave us
   }
 }
@@ -525,7 +521,13 @@ scheduler(void)
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        struct proc *yielded_p = c->proc;
         c->proc = 0;
+        // Check if a direct co_yield bypass happened!
+        if (yielded_p != p) {
+          release(&yielded_p->lock);
+          continue;
+        }
       }
       release(&p->lock);
     }
