@@ -376,9 +376,7 @@ int co_yield(int target_pid, int value){
   // Check if the target process is waiting for US
   if(target_p->trapframe->a0 != -my_pid) { 
     while(my_p->trapframe->a0 == -target_pid){ 
-      printf("Process %d going to sleep\n", my_pid);
       sleep(my_p, &target_p->lock);
-      printf("Process %d woke up\n", my_pid);
     }
 
     release(&target_p->lock);
@@ -387,9 +385,8 @@ int co_yield(int target_pid, int value){
   } else {
 
     target_p->trapframe->a0 = value; 
-    target_p->state = RUNNING;
-    
     acquire(&my_p->lock);
+    target_p->state = RUNNING;
     my_p->state = SLEEPING;
     release(&my_p->lock); 
     
@@ -397,6 +394,7 @@ int co_yield(int target_pid, int value){
     swtch(&my_p->context, &target_p->context);
 
     release(&my_p->lock);
+    
 
     return my_p->trapframe->a0; // Return the value the target gave us
   }
